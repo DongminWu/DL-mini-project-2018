@@ -17,7 +17,7 @@ ACT_RIGHT = 4
 
 
 
-BOARD_WIDTH = 6
+BOARD_WIDTH = 4
 BOARD_SIZE = BOARD_WIDTH * BOARD_WIDTH
 
 
@@ -39,9 +39,11 @@ class Environment:
     
     def __init__(self):
 
-        self.enemy_reward = -1
+        self.enemy_reward = 0
         self.goal_reward = 1
         self.life_reward = -1
+        self.agent_pos, self.enemy_pos, self.goal_pos, self.ori_agent_pos= [],[],[], []
+        self.board = self.generate_grid_world()
         self.reset()
 
     def generate_grid_world(self, num_agent=1, num_enemy=1,num_goal=1):
@@ -74,11 +76,14 @@ class Environment:
         ret = matrix.reshape((BOARD_WIDTH, BOARD_WIDTH))
 
         self.agent_pos = position_translate(agent_idxs)
+        self.ori_agent_pos = self.agent_pos[:]
         self.enemy_pos = position_translate(enemy_idxs)
         self.goal_pos = position_translate(goal_idxs)
         return ret
     
     def render(self):
+
+
         print("")
         for m in self.board:
             for n in m:
@@ -97,21 +102,28 @@ class Environment:
             
 
     def reset(self):
-        self.agent_pos, self.enemy_pos, self.goal_pos = [],[],[]
+        
         # self.board = np.zeros([BOARD_WIDTH,BOARD_WIDTH])
         self.board = self.generate_grid_world()
+
+        #self.render()
+
+        # return self.board
+        return np.identity(BOARD_SIZE)[int(self.ori_agent_pos[0][1])*BOARD_WIDTH + int(self.ori_agent_pos[0][0])]
 
 
     def step(self,action):
 
         logger("action: %s" %  action)
 
-        observation = self.board
+        new_board = self.board
         reward = 0
         done = False
         info = ""
 
         cur_agent_pos = self.agent_pos[0]
+
+        observation = np.identity(BOARD_SIZE)[int(cur_agent_pos[1])*BOARD_WIDTH + int(cur_agent_pos[0])]
 
                 
         
@@ -125,6 +137,12 @@ class Environment:
         logger(new_pos)
 
         # condition 1: cannot exceed the boarder
+
+        if (new_pos[0]<0 or new_pos[0]>BOARD_WIDTH-1 or new_pos[1]<0 or new_pos[1]>BOARD_WIDTH-1):
+            reward = self.enemy_reward
+            done = True
+            return observation, reward, done, info
+
         if new_pos[0] < 0:
             new_pos[0] = 0 
         if new_pos[0] > BOARD_WIDTH-1:
@@ -145,22 +163,25 @@ class Environment:
         elif self.collition(new_pos, self.goal_pos):
             reward = self.goal_reward
             done = True
+            # print ("success!")
         else:
 
             #moving the agent
 
-            observation[int(cur_agent_pos[1])][int(cur_agent_pos[0])] = ENV_EMPTY
+            new_board[int(cur_agent_pos[1])][int(cur_agent_pos[0])] = ENV_EMPTY
             
-            observation[int(new_pos[1])][int(new_pos[0])] = ENV_AGENT
+            new_board[int(new_pos[1])][int(new_pos[0])] = ENV_AGENT
 
             self.agent_pos[0]= new_pos.copy()
 
-
+            observation = np.identity(BOARD_SIZE)[int(new_pos[1])*BOARD_WIDTH + int(new_pos[0])]
+            
           #update the board
-            self.board = observation
+            self.board = new_board
         
 
-
+        # if done:
+            # print("Done!")
 
         
         return observation, reward, done, info
@@ -190,12 +211,17 @@ if __name__ == "__main__":
 
     d = False
     for m in range(100):
-        env.render()
         ob, r, d, i = env.step(np.random.randint(0,5))
+        print(ob)
 
         if d:
+            env.render()
             print("Done in %d times with reward %d" % (m,r))
             break
+
+    print(env.reset())
+
+    
 
     
 

@@ -1,4 +1,4 @@
-DEBUG_LOG = True
+DEBUG_LOG = False
 
 
 def logger(s):
