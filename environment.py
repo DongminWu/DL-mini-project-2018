@@ -5,8 +5,8 @@ from logger import logger
 ENV_OBSTACLE = 255
 ENV_EMPTY = 0
 ENV_AGENT = 1
-ENV_ENEMY = 2
-ENV_GOAL = 3
+ENV_ENEMY = 0.01
+ENV_GOAL = 0.02
 
 ACT_STAY = 0
 ACT_UP = 1
@@ -17,7 +17,7 @@ ACT_RIGHT = 4
 
 
 
-BOARD_WIDTH = 4
+BOARD_WIDTH = 8
 BOARD_SIZE = BOARD_WIDTH * BOARD_WIDTH
 
 
@@ -42,8 +42,10 @@ class Environment:
         self.enemy_reward = 0
         self.goal_reward = 1
         self.life_reward = -1
-        self.agent_pos, self.enemy_pos, self.goal_pos, self.ori_agent_pos= [],[],[], []
+        self.agent_pos, self.enemy_pos, self.goal_pos= [],[],[]
         self.board = self.generate_grid_world()
+        self.ori_agent_pos = self.agent_pos[:]
+        self.ori_board = self.board.copy()
         self.reset()
 
     def generate_grid_world(self, num_agent=1, num_enemy=1,num_goal=1):
@@ -76,7 +78,6 @@ class Environment:
         ret = matrix.reshape((BOARD_WIDTH, BOARD_WIDTH))
 
         self.agent_pos = position_translate(agent_idxs)
-        self.ori_agent_pos = self.agent_pos[:]
         self.enemy_pos = position_translate(enemy_idxs)
         self.goal_pos = position_translate(goal_idxs)
         return ret
@@ -109,7 +110,9 @@ class Environment:
         #self.render()
 
         # return self.board
-        return np.identity(BOARD_SIZE)[int(self.ori_agent_pos[0][1])*BOARD_WIDTH + int(self.ori_agent_pos[0][0])]
+        self.board = self.ori_board.copy()
+        self.agent_pos = self.ori_agent_pos[:]
+        return self.get_observation(self.agent_pos[0])
 
 
     def step(self,action):
@@ -123,7 +126,7 @@ class Environment:
 
         cur_agent_pos = self.agent_pos[0]
 
-        observation = np.identity(BOARD_SIZE)[int(cur_agent_pos[1])*BOARD_WIDTH + int(cur_agent_pos[0])]
+        observation = self.get_observation(self.agent_pos[0])
 
                 
         
@@ -174,10 +177,11 @@ class Environment:
 
             self.agent_pos[0]= new_pos.copy()
 
-            observation = np.identity(BOARD_SIZE)[int(new_pos[1])*BOARD_WIDTH + int(new_pos[0])]
             
           #update the board
             self.board = new_board
+
+            observation = self.get_observation(self.agent_pos[0])
         
 
         # if done:
@@ -189,6 +193,32 @@ class Environment:
 
     def collition(self, pos1, pos2):
         return np.all(pos1==pos2)
+
+    def get_observation(self,ag_pos):
+
+        #only return agent pos
+        # return np.identity(BOARD_SIZE)[int(ag_pos[1])*BOARD_WIDTH + int(ag_pos[0])]
+
+
+        #return full view of map
+        # s = self.board.reshape(-1)
+        # s[int(self.enemy_pos[0][1])*BOARD_WIDTH + int(self.enemy_pos[0][0])]=0
+        # s[int(self.goal_pos[0][1])*BOARD_WIDTH + int(self.goal_pos[0][0])]=0
+
+        #only in this way, the result will converge, misteriously
+
+        b = np.identity(BOARD_SIZE)[int(ag_pos[1])*BOARD_WIDTH + int(ag_pos[0])]
+
+        b_ene = np.identity(BOARD_SIZE)[int(self.enemy_pos[0][1])*BOARD_WIDTH + int(self.enemy_pos[0][0])]*ENV_ENEMY
+        b_goal = np.identity(BOARD_SIZE)[int(self.goal_pos[0][1])*BOARD_WIDTH + int(self.goal_pos[0][0])]*ENV_GOAL
+
+        b=b+b_ene+b_goal
+       
+        # print(b)
+
+
+        return b
+        
 
         
 
@@ -210,7 +240,7 @@ if __name__ == "__main__":
     print(env.goal_pos)
 
     d = False
-    for m in range(100):
+    for m in range(200):
         ob, r, d, i = env.step(np.random.randint(0,5))
         print(ob)
 

@@ -6,6 +6,8 @@ import random
 from environment import Environment, BOARD_SIZE, BOARD_WIDTH
 from logger import logger
 
+
+
 # env = gym.make('FrozenLake-v0')
 env = Environment()
 
@@ -47,6 +49,12 @@ for i in range(num_episodes):
     rList.append(rAll)
 
 print("Score over time: " +  str(sum(rList)/num_episodes))
+
+import plot_helper as ph
+
+ph.draw_plot(rList)
+ph.draw_plot(rList[0:100])
+
 
 print("Final Q-Table Values")
 env.render()
