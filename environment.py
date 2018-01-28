@@ -104,7 +104,7 @@ class Environment:
     def reset(self):
         
         # self.board = np.zeros([BOARD_WIDTH,BOARD_WIDTH])
-        self.board = self.generate_grid_world()
+        # self.board = self.generate_grid_world()
 
         #self.render()
 
