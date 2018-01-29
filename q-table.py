@@ -18,7 +18,7 @@ Q = np.zeros([BOARD_SIZE,5])
 # Set learning parameters
 lr = .8
 y = .95
-num_episodes = 2000
+num_episodes = 20000
 #create lists to contain total rewards and steps per episode
 #jList = []
 rList = []
@@ -32,7 +32,7 @@ for i in range(num_episodes):
     d = False
     j = 0
     #The Q-Table learning algorithm
-    while j < 99:
+    while j < 999:
         j+=1
         #Choose an action by greedily (with noise) picking from Q table
         a = np.argmax(Q[s,:] + np.random.randn(1,5)*(1./(i+1)))
@@ -52,9 +52,12 @@ print("Score over time: " +  str(sum(rList)/num_episodes))
 
 import plot_helper as ph
 
-ph.draw_plot(rList)
-ph.draw_plot(rList[0:100])
+# ph.draw_plot(rList)
+# ph.draw_plot(rList[0:100])
 
+import pickle
+with open("result_q_table_16x16.list","wb") as f:
+    pickle.dump(rList,f)
 
 print("Final Q-Table Values")
 env.render()

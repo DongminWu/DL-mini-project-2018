@@ -69,7 +69,7 @@ class Q_Network():
 # exploration = "e-greedy" #Exploration method. Choose between: greedy, random, e-greedy, boltzmann, bayesian.
 exploration = "e-greedy"
 y = .99 #Discount factor.
-num_episodes = 200000 #Total number of episodes to train network for.
+num_episodes = 20000 #Total number of episodes to train network for.
 tau = 0.001 #Amount to update target network at each step.
 batch_size = 32 #Size of training batch
 startE = 1 #Starting chance of random action
@@ -161,6 +161,7 @@ with tf.Session() as sess:
         jList.append(j)
         rList.append(rAll)
         if i % 100 == 0 and i != 0:
+            print("\n-->episode: %d" % i)
             r_mean = np.mean(rList[-100:])
             j_mean = np.mean(jList[-100:])
             if exploration == 'e-greedy':
@@ -174,3 +175,7 @@ with tf.Session() as sess:
             rMeans.append(r_mean)
             jMeans.append(j_mean)
 print("Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%")
+
+import pickle
+with open("result_q_learning_16x16.list","wb") as f:
+    pickle.dump(rList,f)

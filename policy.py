@@ -69,12 +69,12 @@ update_frequency = 5
 
 init = tf.global_variables_initializer()
 
+total_reward = []
+total_lenght = []
 # Launch the tensorflow graph
 with tf.Session() as sess:
     sess.run(init)
     i = 0
-    total_reward = []
-    total_lenght = []
         
     gradBuffer = sess.run(tf.trainable_variables())
     for ix,grad in enumerate(gradBuffer):
@@ -117,5 +117,10 @@ with tf.Session() as sess:
         
             #Update our running tally of scores.
         if i % 100 == 0:
-            print(np.mean(total_reward[-100:]))
+            print("episode: %d, mean reward: %f" %(i, np.mean(total_reward[-100:])))
         i += 1
+
+
+import pickle
+with open("result_q_policy_16x16.list","wb") as f:
+    pickle.dump(total_reward,f)
