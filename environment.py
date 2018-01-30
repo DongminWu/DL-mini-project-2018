@@ -1,6 +1,7 @@
 import numpy as np
 from logger import logger
 
+ENEMY_ATTACK="soft_attack"
 
 ENV_OBSTACLE = 255
 ENV_EMPTY = 0
@@ -17,7 +18,7 @@ ACT_RIGHT = 4
 
 
 
-BOARD_WIDTH = 16
+BOARD_WIDTH = 5
 BOARD_SIZE = BOARD_WIDTH * BOARD_WIDTH
 
 
@@ -115,49 +116,45 @@ class Environment:
         return self.get_observation(self.agent_pos[0])
 
 
+    def try_move(self, cur_pos, action):
+        new_pos = cur_pos.copy()
+        new_pos[1] = new_pos[1] - 1 if action == ACT_UP else new_pos[1]
+        new_pos[0] = new_pos[0] - 1 if action == ACT_LEFT else new_pos[0]
+        new_pos[1] = new_pos[1] + 1 if action == ACT_DOWN else new_pos[1]
+        new_pos[0] = new_pos[0] + 1 if action == ACT_RIGHT  else new_pos[0]
+
+        if (new_pos[0]<0 or new_pos[0]>BOARD_WIDTH-1 or new_pos[1]<0 or new_pos[1]>BOARD_WIDTH-1):
+            return False, cur_pos.copy()
+
+        else:
+            return True, new_pos
+
+    def apply_new_pos(self, old_pos, new_pos, who):
+        self.board[int(old_pos[1])][int(old_pos[0])] = ENV_EMPTY
+        self.board[int(new_pos[1])][int(new_pos[0])] = who
+        return new_pos.copy()
+
+
+        
+
     def step(self,action):
 
-        logger("action: %s" %  action)
+        print("action: %s" %  action)
 
         new_board = self.board
         reward = 0
         done = False
         info = ""
 
-        cur_agent_pos = self.agent_pos[0]
 
         observation = self.get_observation(self.agent_pos[0])
 
                 
-        
-        new_pos = cur_agent_pos.copy()
-        new_pos[1] = new_pos[1] - 1 if action == ACT_UP else new_pos[1]
-        new_pos[0] = new_pos[0] - 1 if action == ACT_LEFT else new_pos[0]
-        new_pos[1] = new_pos[1] + 1 if action == ACT_DOWN else new_pos[1]
-        new_pos[0] = new_pos[0] + 1 if action == ACT_RIGHT  else new_pos[0]
-
-
-        logger(new_pos)
-
-        # condition 1: cannot exceed the boarder
-
-        if (new_pos[0]<0 or new_pos[0]>BOARD_WIDTH-1 or new_pos[1]<0 or new_pos[1]>BOARD_WIDTH-1):
+        ret, new_pos = self.try_move(self.agent_pos[0], action)
+        if ret == False: #hit the wall, stop
             reward = self.enemy_reward
             done = True
             return observation, reward, done, info
-
-        if new_pos[0] < 0:
-            new_pos[0] = 0 
-        if new_pos[0] > BOARD_WIDTH-1:
-            new_pos[0] = BOARD_WIDTH-1    
-        if new_pos[1] < 0:
-            new_pos[1] = 0 
-        if new_pos[1] > BOARD_WIDTH-1:
-            new_pos[1] = BOARD_WIDTH-1    
-
-
-        logger(new_pos)
-        # condition 2: collition detection
 
         if self.collition(new_pos, self.enemy_pos):
             #meet enemy, done
@@ -169,23 +166,36 @@ class Environment:
             # print ("success!")
         else:
 
+            #move the enemy first
+            if ENEMY_ATTACK == "random":
+                enemy_action = np.random.randint(0,5)
+            elif ENEMY_ATTACK == "soft_attack":
+                enemy_action = ACT_STAY
+                rnd = np.random.rand(1) < 0.2 #20% chance to attack the agent
+                if rnd:
+                    if self.enemy_pos[0][0] < self.agent_pos[0][0]:
+                        enemy_action = ACT_RIGHT
+                    elif self.enemy_pos[0][0] > self.agent_pos[0][0]:
+                        enemy_action = ACT_LEFT
+                    elif self.enemy_pos[0][1] < self.agent_pos[0][1]:
+                        enemy_action = ACT_DOWN
+                    elif self.enemy_pos[0][1] > self.agent_pos[0][1]:
+                        enemy_action = ACT_UP
+
+
+            ret, new_enemy = self.try_move(self.enemy_pos[0],enemy_action)
+            if ret:
+                if (self.collition(new_enemy, self.agent_pos[0]) and \
+                    self.collition(new_enemy, self.goal_pos[0])) == False :
+                    self.enemy_pos[0] = self.apply_new_pos(self.enemy_pos[0], new_enemy, ENV_ENEMY)         
+
             #moving the agent
+            self.agent_pos[0] = self.apply_new_pos(self.agent_pos[0], new_pos, ENV_AGENT)  
 
-            new_board[int(cur_agent_pos[1])][int(cur_agent_pos[0])] = ENV_EMPTY
-            
-            new_board[int(new_pos[1])][int(new_pos[0])] = ENV_AGENT
 
-            self.agent_pos[0]= new_pos.copy()
-
-            
-          #update the board
-            self.board = new_board
 
             observation = self.get_observation(self.agent_pos[0])
         
-
-        # if done:
-            # print("Done!")
 
         
         return observation, reward, done, info
@@ -216,7 +226,6 @@ class Environment:
        
         # print(b)
 
-
         return b
         
 
@@ -242,7 +251,7 @@ if __name__ == "__main__":
     d = False
     for m in range(200):
         ob, r, d, i = env.step(np.random.randint(0,5))
-        print(ob)
+        env.render()
 
         if d:
             env.render()
